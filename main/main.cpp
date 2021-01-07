@@ -71,9 +71,9 @@ void debugTask (void *pvParameters);
 #define AP_PSSWD CONFIG_AP_PSSWD
 
 #define EXAMPLE_ESP_WIFI_SSID "home-2.4G"
-#define EXAMPLE_ESP_WIFI_PASS "6453kunz" 
+#define EXAMPLE_ESP_WIFI_PASS "6453kunz"
 
-#define AP_SSID_IN "grbl"
+#define AP_SSID_IN "Grbl"
 #define AP_PSSWD_IN "12345678"
 
 

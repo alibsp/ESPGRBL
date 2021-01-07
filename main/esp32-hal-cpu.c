@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
@@ -202,7 +203,8 @@ uint32_t getXtalFrequencyMhz(){
     return rtc_clk_xtal_freq_get();
 }
 
-uint32_t getApbFrequency(){
+uint32_t getApbFrequency()
+{
     rtc_cpu_freq_config_t conf;
     rtc_clk_cpu_freq_get_config(&conf);
     return calculateApb(&conf);
