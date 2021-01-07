@@ -13,7 +13,8 @@ function sendMsg() {
 }
 
 function sendText(text) {
-  websocket.send("M" + text);
+ // websocket.send("M" + text);
+     websocket.send( text);
 }
 
 websocket.onopen = function(evt) {
