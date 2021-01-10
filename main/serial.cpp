@@ -2,10 +2,10 @@
   serial.cpp - Header for system level commands and real-time processes
   Part of Grbl
   Copyright (c) 2014-2016 Sungeun K. Jeon for Gnea Research LLC
-	
-	2018 -	Bart Dring This file was modified for use on the ESP32
-					CPU. Do not use this with Grbl for atMega328P
-	
+
+    2018 -	Bart Dring This file was modified for use on the ESP32
+                    CPU. Do not use this with Grbl for atMega328P
+
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
@@ -47,66 +47,66 @@ extern char line_buffer[][20];
 
 void serial_init()
 {
-	Serial.begin(BAUD_RATE);	
-	serialCheckTaskHandle = 0;
-	// create a task to check for incoming data
-	xTaskCreatePinnedToCore(serialCheckTask,    // task
-													"serialCheckTask", // name for task
-													8192,   // size of task stack
-													NULL,   // parameters
-													1, // priority
-													&serialCheckTaskHandle, 
-													0 // core
-													); 
-	xTaskCreatePinnedToCore(protocol_process_gcode, // task
-													"protocol_process_gcode", // name for task
-													8192,   // size of task stack
-													NULL,   // parameters
-													1, // priority
-													&protocolProcessTaskHandle, 
-													1 // core
-													); 
-	
- }
+    Serial.begin(BAUD_RATE);
+    serialCheckTaskHandle = 0;
+    // create a task to check for incoming data
+    xTaskCreatePinnedToCore(serialCheckTask,    // task
+                            "serialCheckTask", // name for task
+                            8192,   // size of task stack
+                            NULL,   // parameters
+                            1, // priority
+                            &serialCheckTaskHandle,
+                            0 // core
+                            );
+    xTaskCreatePinnedToCore(protocol_process_gcode, // task
+                            "protocol_process_gcode", // name for task
+                            8192,   // size of task stack
+                            NULL,   // parameters
+                            1, // priority
+                            &protocolProcessTaskHandle,
+                            1 // core
+                            );
+
+}
 
 
 // this task runs and checks for data on all interfaces
 // REaltime stuff is acted upon, then characters are added to the appropriate buffer
 void serialCheckTask(void *pvParameters)
 {
-	char G_code[LINE_BUFFER_SIZE];
-	while(true) // run continuously
-	 {		
-			memset(G_code,0x0,80);
-		 	xQueueReceive ( websocket_queue, G_code, portMAX_DELAY );	
-			printf("in serial.cpp g_code = %s\n",G_code); 			
-			// Pick off realtime command characters directly from the serial stream. These characters are
-			// not passed into the main buffer, but these set system state flag bits for realtime execution.
-			switch (G_code[0]) 
-			{
-				case CMD_RESET:
-					mc_reset();   // Call motion control reset routine.
-					//report_init_message(client); // fool senders into thinking a reset happened.
-					break; 
-				case CMD_STATUS_REPORT: 
-					report_realtime_status();
-					//grbl_send(0, "message: Command status report\n");
-					break; // direct call instead of setting flag
-				case CMD_CYCLE_START:   system_set_exec_state_flag(EXEC_CYCLE_START); break; // Set as true
-				case CMD_FEED_HOLD:     system_set_exec_state_flag(EXEC_FEED_HOLD); break; // Set as true
-				default :
-					  //numberOfSpacesInGcodeQueue = uxQueueSpacesAvailable(gcode_queue);
-					  //if(numberOfSpacesInGcodeQueue > 18)
-					  	 //printf("number of spaces in gcode_queue = %d\n",numberOfSpacesInGcodeQueue);
-			          if( xQueueSendToBack( gcode_queue, G_code, ( TickType_t ) 50 ) != pdPASS )
-					  	{
-                			printf("Failed to post the message on gcode Queue after 50 ticks\n");
-          				}				
-					
-					
-			}
-       vTaskDelay(1 / portTICK_RATE_MS);  // Yield to other tasks		
-	}  
+    char G_code[LINE_BUFFER_SIZE];
+    while(true) // run continuously
+    {
+        memset(G_code,0x0,80);
+        xQueueReceive ( websocket_queue, G_code, portMAX_DELAY );
+        printf("in serial.cpp g_code = %s\n",G_code);
+        // Pick off realtime command characters directly from the serial stream. These characters are
+        // not passed into the main buffer, but these set system state flag bits for realtime execution.
+        switch (G_code[0])
+        {
+            case CMD_RESET:
+                mc_reset();   // Call motion control reset routine.
+                //report_init_message(client); // fool senders into thinking a reset happened.
+                break;
+            case CMD_STATUS_REPORT:
+                report_realtime_status();
+                //grbl_send(0, "message: Command status report\n");
+                break; // direct call instead of setting flag
+            case CMD_CYCLE_START:   system_set_exec_state_flag(EXEC_CYCLE_START); break; // Set as true
+            case CMD_FEED_HOLD:     system_set_exec_state_flag(EXEC_FEED_HOLD); break; // Set as true
+            default :
+                //numberOfSpacesInGcodeQueue = uxQueueSpacesAvailable(gcode_queue);
+                //if(numberOfSpacesInGcodeQueue > 18)
+                //printf("number of spaces in gcode_queue = %d\n",numberOfSpacesInGcodeQueue);
+                if( xQueueSendToBack( gcode_queue, G_code, ( TickType_t ) 50 ) != pdPASS )
+                {
+                    printf("Failed to post the message on gcode Queue after 50 ticks\n");
+                }
+
+
+        }
+        vTaskDelay(1 / portTICK_RATE_MS);  // Yield to other tasks
+    }
 }
 
 // ==================== call this in main protocol loop if you want it in the main task =========
@@ -120,19 +120,19 @@ void serialCheckTask(void *pvParameters)
 // 	char data[20];
 // 	uint8_t next_head;
 // 	uint8_t client = CLIENT_SERIAL; // who send the data
-	
+
 // 	uint8_t client_idx = 0;  // index of data buffer
-	
-	 		
+
+
 // 		while (strlen(mess) >0)
-		        
+
 // 		{			
 // 			printf("line buff len1  = %d",strlen(mess));
 // 			//for (int i=0;i !=strlen(line_bufferA);i++)
 // 			while (strlen(mess) > 0)
 // 			{  i ++;
 // 			//printf("data = %s", line_bufferA);
-			
+
 // 			// Pick off realtime command characters directly from the serial stream. These characters are
 // 			// not passed into the main buffer, but these set system state flag bits for realtime execution.
 // 			switch (line_bufferA[i]) {
@@ -181,7 +181,7 @@ void serialCheckTask(void *pvParameters)
 // 						}
 // 						// Throw away any unfound extended-ASCII character by not passing it to the serial buffer.
 // 					} else { // Write character to buffer
-					
+
 // 						vTaskEnterCritical(&myMutex);
 // 						next_head = serial_rx_buffer_head[client_idx] + 1;
 // 						if (next_head == RX_RING_BUFFER) { next_head = 0; }
@@ -189,7 +189,7 @@ void serialCheckTask(void *pvParameters)
 // 						// Write data to buffer unless it is full.
 // 						if (next_head != serial_rx_buffer_tail[client_idx]) {
 // 							serial_rx_buffer[client_idx][serial_rx_buffer_head[client_idx]] = mess[i];
-							
+
 // 							serial_rx_buffer_head[client_idx] = next_head;
 // 						}	
 // 						vTaskExitCritical(&myMutex);
@@ -216,19 +216,19 @@ void serialCheckTask(void *pvParameters)
 
 // Writes one byte to the TX serial buffer. Called by main program.
 void serial_write(uint8_t data) {
-  Serial.write((char)data);
+    Serial.write((char)data);
 }
 
 
 
 void serial_store( char abA[])
 {
-printf("store-len aba  = %d\n",strlen(abA));
+    printf("store-len aba  = %d\n",strlen(abA));
 
- memcpy(mess,abA,strlen(abA));
-mess[strlen(abA)] = '\0';
-printf("store = %s",mess);
-printf("store-len = %d",strlen(mess));
+    memcpy(mess,abA,strlen(abA));
+    mess[strlen(abA)] = '\0';
+    printf("store = %s",mess);
+    printf("store-len = %d",strlen(mess));
 
 }
 

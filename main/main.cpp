@@ -214,37 +214,37 @@ static esp_err_t wifi_event_handler(void* ctx, system_event_t* event) {
     const char* TAG = "wifi_event_handler";
 
     switch(event->event_id) {
-    case SYSTEM_EVENT_AP_START:
-        ESP_LOGI(TAG,"Access Point Started");
-        break;
-    case SYSTEM_EVENT_AP_STOP:
-        ESP_LOGI(TAG,"Access Point Stopped");
-        break;
-    case SYSTEM_EVENT_AP_STACONNECTED:
-        ESP_LOGI(TAG,"STA Connected, MAC=%02x:%02x:%02x:%02x:%02x:%02x AID=%i",
-                 event->event_info.sta_connected.mac[0],event->event_info.sta_connected.mac[1],
-                event->event_info.sta_connected.mac[2],event->event_info.sta_connected.mac[3],
-                event->event_info.sta_connected.mac[4],event->event_info.sta_connected.mac[5],
-                event->event_info.sta_connected.aid);
-        break;
-    case SYSTEM_EVENT_AP_STADISCONNECTED:
-        ESP_LOGI(TAG,"STA Disconnected, MAC=%02x:%02x:%02x:%02x:%02x:%02x AID=%i",
-                 event->event_info.sta_disconnected.mac[0],event->event_info.sta_disconnected.mac[1],
-                event->event_info.sta_disconnected.mac[2],event->event_info.sta_disconnected.mac[3],
-                event->event_info.sta_disconnected.mac[4],event->event_info.sta_disconnected.mac[5],
-                event->event_info.sta_disconnected.aid);
-        break;
-    case SYSTEM_EVENT_AP_PROBEREQRECVED:
-        ESP_LOGI(TAG,"AP Probe Received");
-        break;
-    case SYSTEM_EVENT_AP_STA_GOT_IP6:
-        ESP_LOGI(TAG,"Got IP6=%01x:%01x:%01x:%01x",
-                 event->event_info.got_ip6.ip6_info.ip.addr[0],event->event_info.got_ip6.ip6_info.ip.addr[1],
-                event->event_info.got_ip6.ip6_info.ip.addr[2],event->event_info.got_ip6.ip6_info.ip.addr[3]);
-        break;
-    default:
-        ESP_LOGI(TAG,"Unregistered event=%i",event->event_id);
-        break;
+        case SYSTEM_EVENT_AP_START:
+            ESP_LOGI(TAG,"Access Point Started");
+            break;
+        case SYSTEM_EVENT_AP_STOP:
+            ESP_LOGI(TAG,"Access Point Stopped");
+            break;
+        case SYSTEM_EVENT_AP_STACONNECTED:
+            ESP_LOGI(TAG,"STA Connected, MAC=%02x:%02x:%02x:%02x:%02x:%02x AID=%i",
+                     event->event_info.sta_connected.mac[0],event->event_info.sta_connected.mac[1],
+                    event->event_info.sta_connected.mac[2],event->event_info.sta_connected.mac[3],
+                    event->event_info.sta_connected.mac[4],event->event_info.sta_connected.mac[5],
+                    event->event_info.sta_connected.aid);
+            break;
+        case SYSTEM_EVENT_AP_STADISCONNECTED:
+            ESP_LOGI(TAG,"STA Disconnected, MAC=%02x:%02x:%02x:%02x:%02x:%02x AID=%i",
+                     event->event_info.sta_disconnected.mac[0],event->event_info.sta_disconnected.mac[1],
+                    event->event_info.sta_disconnected.mac[2],event->event_info.sta_disconnected.mac[3],
+                    event->event_info.sta_disconnected.mac[4],event->event_info.sta_disconnected.mac[5],
+                    event->event_info.sta_disconnected.aid);
+            break;
+        case SYSTEM_EVENT_AP_PROBEREQRECVED:
+            ESP_LOGI(TAG,"AP Probe Received");
+            break;
+        case SYSTEM_EVENT_AP_STA_GOT_IP6:
+            ESP_LOGI(TAG,"Got IP6=%01x:%01x:%01x:%01x",
+                     event->event_info.got_ip6.ip6_info.ip.addr[0],event->event_info.got_ip6.ip6_info.ip.addr[1],
+                    event->event_info.got_ip6.ip6_info.ip.addr[2],event->event_info.got_ip6.ip6_info.ip.addr[3]);
+            break;
+        default:
+            ESP_LOGI(TAG,"Unregistered event=%i",event->event_id);
+            break;
     }
     return ESP_OK;
 }
@@ -312,53 +312,53 @@ void websocket_callback(uint8_t num,WEBSOCKET_TYPE_t type,char msg[][30],uint64_
     const static char* TAG = "websocket_callback";
     int value;
     switch(type) {
-    case WEBSOCKET_CONNECT:
-        ESP_LOGI(TAG,"client %i connected!",num);
-        websocketConnected = true;
-        break;
-    case WEBSOCKET_DISCONNECT_EXTERNAL:
-        ESP_LOGI(TAG,"client %i sent a disconnect message",num);
-        websocketConnected = false;
-        break;
-    case WEBSOCKET_DISCONNECT_INTERNAL:
-        ESP_LOGI(TAG,"client %i was disconnected",num);
-        websocketConnected = false;
-        break;
-    case WEBSOCKET_DISCONNECT_ERROR:
-        ESP_LOGI(TAG,"client %i was disconnected due to an error",num);
-        websocketConnected = false;
-        break;
-    case WEBSOCKET_TEXT:
-        if(len) // if the message length was greater than zero
-        {
-            //numberOfSpacesInWebsocketQueue = uxQueueSpacesAvailable(websocket_queue);
-            //if(numberOfSpacesInWebsocketQueue > 18)
-            //printf("number of spaces in webSocket_queue = %d\n",numberOfSpacesInWebsocketQueue);
-            int i;
-            for(i=0;i < 20;i++)
+        case WEBSOCKET_CONNECT:
+            ESP_LOGI(TAG,"client %i connected!",num);
+            websocketConnected = true;
+            break;
+        case WEBSOCKET_DISCONNECT_EXTERNAL:
+            ESP_LOGI(TAG,"client %i sent a disconnect message",num);
+            websocketConnected = false;
+            break;
+        case WEBSOCKET_DISCONNECT_INTERNAL:
+            ESP_LOGI(TAG,"client %i was disconnected",num);
+            websocketConnected = false;
+            break;
+        case WEBSOCKET_DISCONNECT_ERROR:
+            ESP_LOGI(TAG,"client %i was disconnected due to an error",num);
+            websocketConnected = false;
+            break;
+        case WEBSOCKET_TEXT:
+            if(len) // if the message length was greater than zero
             {
-                if(msg[i][0] != '\0')
+                //numberOfSpacesInWebsocketQueue = uxQueueSpacesAvailable(websocket_queue);
+                //if(numberOfSpacesInWebsocketQueue > 18)
+                //printf("number of spaces in webSocket_queue = %d\n",numberOfSpacesInWebsocketQueue);
+                int i;
+                for(i=0;i < 20;i++)
                 {
-                    printf("main.cpp websocket_callback msg = %s\n",msg[i]);
-                    if( xQueueSendToBack( websocket_queue, msg[i], ( TickType_t ) 500 ) != pdPASS )
-                        printf("Failed to post the message on websocket Queue after 50 ticks\n");
-                }
-                else
-                {
-                    break;
+                    if(msg[i][0] != '\0')
+                    {
+                        printf("main.cpp websocket_callback msg = %s\n",msg[i]);
+                        if( xQueueSendToBack( websocket_queue, msg[i], ( TickType_t ) 500 ) != pdPASS )
+                            printf("Failed to post the message on websocket Queue after 50 ticks\n");
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
             }
-        }
-        break;
-    case WEBSOCKET_BIN:
-        //ESP_LOGI(TAG,"client %i sent binary message of size %i:\n%s",num,(uint32_t)len,msg);
-        break;
-    case WEBSOCKET_PING:
-        //ESP_LOGI(TAG,"client %i pinged us with message of size %i:\n%s",num,(uint32_t)len,msg);
-        break;
-    case WEBSOCKET_PONG:
-        //ESP_LOGI(TAG,"client %i responded to the ping",num);
-        break;
+            break;
+        case WEBSOCKET_BIN:
+            //ESP_LOGI(TAG,"client %i sent binary message of size %i:\n%s",num,(uint32_t)len,msg);
+            break;
+        case WEBSOCKET_PING:
+            //ESP_LOGI(TAG,"client %i pinged us with message of size %i:\n%s",num,(uint32_t)len,msg);
+            break;
+        case WEBSOCKET_PONG:
+            //ESP_LOGI(TAG,"client %i responded to the ping",num);
+            break;
     }
 }
 
@@ -461,7 +461,7 @@ static void tcp_server_task(void *pvParameters)
 
                     if(len)
                     {
-                     //   printf("main.cpp websocket_callback msg = %s\n",msg[i]);
+                        //   printf("main.cpp websocket_callback msg = %s\n",msg[i]);
                         if( xQueueSendToBack( websocket_queue, rx_buffer, ( TickType_t ) 500 ) != pdPASS )
                             printf("Failed to post the message on websocket Queue after 50 ticks\n");
                     }
@@ -612,7 +612,8 @@ static void http_serve(struct netconn *conn) {
 }
 
 // handles clients when they first connect. passes to a queue
-static void server_task(void* pvParameters) {
+static void server_task(void* pvParameters)
+{
     const static char* TAG = "server_task";
     struct netconn *conn, *newconn;
     static err_t err;
@@ -700,7 +701,7 @@ void setup() {
     //xTaskCreate(&count_task,"count_task",6000,NULL,2,NULL);
 
 
-     xTaskCreate(tcp_server_task, "tcp_server", 4096, NULL, 5, NULL);
+    xTaskCreate(tcp_server_task, "tcp_server", 4096, NULL, 5, NULL);
 
 
 }
@@ -798,7 +799,8 @@ typedef struct {
 
 QueueHandle_t debug_queue;
 
-extern "C" void app_main() {
+extern "C" void app_main()
+{
     //void app_main() {
 
     nvs_flash_init();
@@ -820,8 +822,6 @@ extern "C" void app_main() {
         ESP_ERROR_CHECK(nvs_flash_erase());
         ret = nvs_flash_init();
     }
-
-
     //  wifi_init_sta();
     wifi_setup();  //ad me hadi
 
