@@ -79,28 +79,74 @@ void protocol_init()
     // This is also where Grbl idles while waiting for something to do.
     // ---------------------------------------------------------------------------------
 }
+typedef struct QueueDefinition
+{
+    int8_t *pcHead;					/*< Points to the beginning of the queue storage area. */
+    int8_t *pcTail;					/*< Points to the byte at the end of the queue storage area.  Once more byte is allocated than necessary to store the queue items, this is used as a marker. */
+    int8_t *pcWriteTo;				/*< Points to the free next place in the storage area. */
+
+    union							/* Use of a union is an exception to the coding standard to ensure two mutually exclusive structure members don't appear simultaneously (wasting RAM). */
+    {
+        int8_t *pcReadFrom;			/*< Points to the last place that a queued item was read from when the structure is used as a queue. */
+        UBaseType_t uxRecursiveCallCount;/*< Maintains a count of the number of times a recursive mutex has been recursively 'taken' when the structure is used as a mutex. */
+    } u;
+
+    List_t xTasksWaitingToSend;		/*< List of tasks that are blocked waiting to post onto this queue.  Stored in priority order. */
+    List_t xTasksWaitingToReceive;	/*< List of tasks that are blocked waiting to read from this queue.  Stored in priority order. */
+
+    volatile UBaseType_t uxMessagesWaiting;/*< The number of items currently in the queue. */
+    UBaseType_t uxLength;			/*< The length of the queue defined as the number of items it will hold, not the number of bytes. */
+    UBaseType_t uxItemSize;			/*< The size of each items that the queue will hold. */
+
+    #if( ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) )
+        uint8_t ucStaticallyAllocated;	/*< Set to pdTRUE if the memory used by the queue was statically allocated to ensure no attempt is made to free the memory. */
+    #endif
+
+    #if ( configUSE_QUEUE_SETS == 1 )
+        struct QueueDefinition *pxQueueSetContainer;
+    #endif
+
+    #if ( configUSE_TRACE_FACILITY == 1 )
+        UBaseType_t uxQueueNumber;
+        uint8_t ucQueueType;
+    #endif
+
+    portMUX_TYPE mux;		//Mutex required due to SMP
+
+} xQUEUE;
+
 
 void protocol_process_gcode(void *pvParameters)
 {
 
     printf("protocol running on core = %d\n", xPortGetCoreID());
     char message[LINE_BUFFER_SIZE];
-
+    int last_numberOfSpacesInGcodeQueue =0;
     while (true)
     {
         //printf("%s\n",line);
         // Process one line of incoming serial data, as the data becomes available. Performs an
         // initial filtering by removing spaces and comments and capitalizing all letters.
         message[0] = '\0';
+        //printf("protocol_process_gcode1 default %s %d\n", message, strlen(message));//, (char*)gcode_queue->pcTail);
         xQueueReceive (gcode_queue, message, 0);
+        int numberOfSpacesInGcodeQueue = uxQueueSpacesAvailable(gcode_queue);
+        //if(numberOfSpacesInGcodeQueue > 18)
+        //printf("number of spaces in gcode_queue = %d\n",numberOfSpacesInGcodeQueue);
+        if(last_numberOfSpacesInGcodeQueue!=numberOfSpacesInGcodeQueue)
+            printf("protocol_process_gcode gcode_queue len:%d, numberOfSpacesInGcodeQueue:%d\n", ((xQUEUE*)gcode_queue)->uxMessagesWaiting, numberOfSpacesInGcodeQueue);
+        last_numberOfSpacesInGcodeQueue = numberOfSpacesInGcodeQueue;
+        //printf("serialCheckTask default %s %d %s %s\n", message, strlen(message), gcode_queue->pcHead, gcode_queue->pcTail);
+        //printf("protocol_process_gcode2 default %s %d\n", message, strlen(message));
         if(strlen(message) == 0)
         {
             protocol_execute_realtime();
             if (sys.abort)
             {
                 printf("sys abort\n");
-                return;
-            } // Bail to calling function upon system abort
+                break;
+                //return;
+            } // Fail to calling function upon system abort
             protocol_auto_cycle_start();
             protocol_execute_realtime();
             continue;
@@ -108,10 +154,13 @@ void protocol_process_gcode(void *pvParameters)
         printf("message len = %x\n",strlen(message));
         check_gcode(message);
         protocol_execute_realtime(); // Runtime command check point.
+        //aldaghi code
+        grbl_send(message);
         if (sys.abort)
         {
             printf("sys abort\n");
-            return;
+            break;
+            //return;
         } // Bail to calling function upon system abort
 
 
@@ -119,24 +168,30 @@ void protocol_process_gcode(void *pvParameters)
         report_echo_line_received(line, client);
 #endif
         // Direct and execute one line of formatted input, and report status of execution.
-        if (line_flags & LINE_FLAG_OVERFLOW) {
+        if (line_flags & LINE_FLAG_OVERFLOW)
+        {
             // Report line overflow error.
             printf("line flag overflow");
             report_status_message(STATUS_OVERFLOW,"overflow");
-        } else if (line[0] == 0) {
+        } else if (line[0] == 0)
+        {
             // Empty or comment line. For syncing purposes.
             printf("status ok\n");
             report_status_message(STATUS_OK,"empty line");
-        } else if (line[0] == '$') {
+        } else if (line[0] == '$')
+        {
             // Grbl '$' system command
             //printf("line = %d client = %d\n",line,0);
             report_status_message(system_execute_line(line),line);
-        } else if (line[0] == '[') {
+        } else if (line[0] == '[')
+        {
             grbl_sendf("[MSG: Unknow Command...%s]\r\n", line);
-        }else if (sys.state & (STATE_ALARM | STATE_JOG)) {
+        }else if (sys.state & (STATE_ALARM | STATE_JOG))
+        {
             // Everything else is gcode. Block if in alarm or jog mode.
             report_status_message(STATUS_SYSTEM_GC_LOCK,"system gc lock");
-        } else {
+        } else
+        {
             report_status_message(gc_execute_line(line),line);
         }
 
@@ -149,7 +204,8 @@ void protocol_process_gcode(void *pvParameters)
         line_flags = 0;    //bob
     }
     printf("fell out of while loop in protcol_process_gcode\n");
-    return; /* Never reached */
+    vTaskDelete(NULL);
+    //return; /* Never reached */
 }
 
 void check_gcode(char * message)
@@ -294,7 +350,8 @@ void protocol_exec_rt_system()
         // the source of the error to the user. If critical, Grbl disables by entering an infinite
         // loop until system reset/abort.
         sys.state = STATE_ALARM; // Set system alarm state
-        switch (rt_exec) {
+        switch (rt_exec)
+        {
             case 1: grbl_send("message: EXEC_ALARM_HARD_LIMIT"); break;
             case 2: grbl_send("message: EXEC_ALARM_SOFT_LIMIT"); break;
             case 3: grbl_send("message: EXEC_ALARM_ABORT_CYCLE"); break;
@@ -307,10 +364,12 @@ void protocol_exec_rt_system()
         }
         report_alarm_message(rt_exec);
         // Halt everything upon a critical event flag. Currently hard and soft limits flag this.
-        if ((rt_exec == EXEC_ALARM_HARD_LIMIT) || (rt_exec == EXEC_ALARM_SOFT_LIMIT)) {
+        if ((rt_exec == EXEC_ALARM_HARD_LIMIT) || (rt_exec == EXEC_ALARM_SOFT_LIMIT))
+        {
             report_feedback_message(MESSAGE_CRITICAL_EVENT);
             system_clear_exec_state_flag(EXEC_RESET); // Disable any existing reset
-            do {
+            do
+            {
                 // Block everything, except reset and status reports, until user issues reset or power
                 // cycles. Hard limits typically occur while unattended or not paying attention. Gives
                 // the user and a GUI time to do what is needed before resetting, like killing the
@@ -322,47 +381,59 @@ void protocol_exec_rt_system()
     }
 
     rt_exec = sys_rt_exec_state; // Copy volatile sys_rt_exec_state.
-    if (rt_exec) {
+    if (rt_exec)
+    {
 
         // Execute system abort.
-        if (rt_exec & EXEC_RESET) {
+        if (rt_exec & EXEC_RESET)
+        {
             sys.abort = true;  // Only place this is set true.
             return; // Nothing else to do but exit.
         }
 
         // Execute and serial print status
-        if (rt_exec & EXEC_STATUS_REPORT) {
+        if (rt_exec & EXEC_STATUS_REPORT)
+        {
             report_realtime_status();
             system_clear_exec_state_flag(EXEC_STATUS_REPORT);
         }
 
         // NOTE: Once hold is initiated, the system immediately enters a suspend state to block all
         // main program processes until either reset or resumed. This ensures a hold completes safely.
-        if (rt_exec & (EXEC_MOTION_CANCEL | EXEC_FEED_HOLD | EXEC_SAFETY_DOOR | EXEC_SLEEP)) {
+        if (rt_exec & (EXEC_MOTION_CANCEL | EXEC_FEED_HOLD | EXEC_SAFETY_DOOR | EXEC_SLEEP))
+        {
 
             // State check for allowable states for hold methods.
-            if (!(sys.state & (STATE_ALARM | STATE_CHECK_MODE))) {
+            if (!(sys.state & (STATE_ALARM | STATE_CHECK_MODE)))
+            {
 
                 // If in CYCLE or JOG states, immediately initiate a motion HOLD.
                 if (sys.state & (STATE_CYCLE | STATE_JOG)) {
-                    if (!(sys.suspend & (SUSPEND_MOTION_CANCEL | SUSPEND_JOG_CANCEL))) { // Block, if already holding.
+                    if (!(sys.suspend & (SUSPEND_MOTION_CANCEL | SUSPEND_JOG_CANCEL)))
+                    { // Block, if already holding.
                         st_update_plan_block_parameters(); // Notify stepper module to recompute for hold deceleration.
                         sys.step_control = STEP_CONTROL_EXECUTE_HOLD; // Initiate suspend state with active flag.
                         if (sys.state == STATE_JOG) { // Jog cancelled upon any hold event, except for sleeping.
-                            if (!(rt_exec & EXEC_SLEEP)) { sys.suspend |= SUSPEND_JOG_CANCEL; }
+                            if (!(rt_exec & EXEC_SLEEP)) { sys.suspend |= SUSPEND_JOG_CANCEL;
+                            }
                         }
                     }
                 }
                 // If IDLE, Grbl is not in motion. Simply indicate suspend state and hold is complete.
-                if (sys.state == STATE_IDLE) { sys.suspend = SUSPEND_HOLD_COMPLETE; }
+                if (sys.state == STATE_IDLE) { sys.suspend = SUSPEND_HOLD_COMPLETE;
+                }
 
                 // Execute and flag a motion cancel with deceleration and return to idle. Used primarily by probing cycle
                 // to halt and cancel the remainder of the motion.
-                if (rt_exec & EXEC_MOTION_CANCEL) {
+                if (rt_exec & EXEC_MOTION_CANCEL)
+                {
                     // MOTION_CANCEL only occurs during a CYCLE, but a HOLD and SAFETY_DOOR may been initiated beforehand
                     // to hold the CYCLE. Motion cancel is valid for a single planner block motion only, while jog cancel
                     // will handle and clear multiple planner block motions.
-                    if (!(sys.state & STATE_JOG)) { sys.suspend |= SUSPEND_MOTION_CANCEL; } // NOTE: State is STATE_CYCLE.
+                    if (!(sys.state & STATE_JOG))
+                    {
+                        sys.suspend |= SUSPEND_MOTION_CANCEL;
+                    } // NOTE: State is STATE_CYCLE.
                 }
 
                 // Execute a feed hold with deceleration, if required. Then, suspend system.

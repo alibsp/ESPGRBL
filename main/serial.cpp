@@ -19,6 +19,7 @@
 */
 
 #include "grbl.h"
+//#include "esp-i queue.c"
 #include "commands.h"
 #include "serial2socket.h"
 #include "hardwareserial.h"
@@ -44,6 +45,41 @@ static TaskHandle_t serialCheckTaskHandle = 0;
 static TaskHandle_t protocolProcessTaskHandle = 0;
 extern char line_buffer[][20];
 
+typedef struct QueueDefinition
+{
+    int8_t *pcHead;					/*< Points to the beginning of the queue storage area. */
+    int8_t *pcTail;					/*< Points to the byte at the end of the queue storage area.  Once more byte is allocated than necessary to store the queue items, this is used as a marker. */
+    int8_t *pcWriteTo;				/*< Points to the free next place in the storage area. */
+
+    union							/* Use of a union is an exception to the coding standard to ensure two mutually exclusive structure members don't appear simultaneously (wasting RAM). */
+    {
+        int8_t *pcReadFrom;			/*< Points to the last place that a queued item was read from when the structure is used as a queue. */
+        UBaseType_t uxRecursiveCallCount;/*< Maintains a count of the number of times a recursive mutex has been recursively 'taken' when the structure is used as a mutex. */
+    } u;
+
+    List_t xTasksWaitingToSend;		/*< List of tasks that are blocked waiting to post onto this queue.  Stored in priority order. */
+    List_t xTasksWaitingToReceive;	/*< List of tasks that are blocked waiting to read from this queue.  Stored in priority order. */
+
+    volatile UBaseType_t uxMessagesWaiting;/*< The number of items currently in the queue. */
+    UBaseType_t uxLength;			/*< The length of the queue defined as the number of items it will hold, not the number of bytes. */
+    UBaseType_t uxItemSize;			/*< The size of each items that the queue will hold. */
+
+    #if( ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) )
+        uint8_t ucStaticallyAllocated;	/*< Set to pdTRUE if the memory used by the queue was statically allocated to ensure no attempt is made to free the memory. */
+    #endif
+
+    #if ( configUSE_QUEUE_SETS == 1 )
+        struct QueueDefinition *pxQueueSetContainer;
+    #endif
+
+    #if ( configUSE_TRACE_FACILITY == 1 )
+        UBaseType_t uxQueueNumber;
+        uint8_t ucQueueType;
+    #endif
+
+    portMUX_TYPE mux;		//Mutex required due to SMP
+
+} xQUEUE;
 
 void serial_init()
 {
@@ -69,17 +105,18 @@ void serial_init()
 
 }
 
-
+char G_code[LINE_BUFFER_SIZE];
 // this task runs and checks for data on all interfaces
 // REaltime stuff is acted upon, then characters are added to the appropriate buffer
 void serialCheckTask(void *pvParameters)
 {
-    char G_code[LINE_BUFFER_SIZE];
+
     while(true) // run continuously
     {
         memset(G_code,0x0,80);
+        printf("serialCheckTask1 \n");
         xQueueReceive ( websocket_queue, G_code, portMAX_DELAY );
-        printf("in serial.cpp g_code = %s\n",G_code);
+        printf("serialCheckTask2 g_code = %s %d\n", G_code, G_code[0]);
         // Pick off realtime command characters directly from the serial stream. These characters are
         // not passed into the main buffer, but these set system state flag bits for realtime execution.
         switch (G_code[0])
@@ -92,12 +129,17 @@ void serialCheckTask(void *pvParameters)
                 report_realtime_status();
                 //grbl_send(0, "message: Command status report\n");
                 break; // direct call instead of setting flag
-            case CMD_CYCLE_START:   system_set_exec_state_flag(EXEC_CYCLE_START); break; // Set as true
-            case CMD_FEED_HOLD:     system_set_exec_state_flag(EXEC_FEED_HOLD); break; // Set as true
+            case CMD_CYCLE_START:
+                system_set_exec_state_flag(EXEC_CYCLE_START);
+                break; // Set as true
+            case CMD_FEED_HOLD:
+                system_set_exec_state_flag(EXEC_FEED_HOLD);
+                break; // Set as true
             default :
-                //numberOfSpacesInGcodeQueue = uxQueueSpacesAvailable(gcode_queue);
+                numberOfSpacesInGcodeQueue = uxQueueSpacesAvailable(gcode_queue);
                 //if(numberOfSpacesInGcodeQueue > 18)
                 //printf("number of spaces in gcode_queue = %d\n",numberOfSpacesInGcodeQueue);
+                printf("serialCheckTask default gcode_queue len:%d, numberOfSpacesInGcodeQueue:%d\n", ((xQUEUE*)gcode_queue)->uxMessagesWaiting, numberOfSpacesInGcodeQueue);
                 if( xQueueSendToBack( gcode_queue, G_code, ( TickType_t ) 50 ) != pdPASS )
                 {
                     printf("Failed to post the message on gcode Queue after 50 ticks\n");

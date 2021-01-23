@@ -22,7 +22,7 @@
 
 void IRAM_ATTR pinMatrixOutAttach(uint8_t pin, uint8_t function, bool invertOut, bool invertEnable)
 {
-	printf("pinMatrixOutAttach pin = %d, function = %d,invertout = %d, invertenable = %d", pin, function, invertOut, invertEnable);
+    printf("pinMatrixOutAttach pin = %d, function = %d,invertout = %d, invertenable = %d\n", pin, function, invertOut, invertEnable);
     gpio_matrix_out(pin, function, invertOut, invertEnable);
 }
 

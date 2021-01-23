@@ -72,7 +72,8 @@ typedef struct {
 } ws_header_t;
 
 // a client, with space for a server callback or a client callback (depending on use)
-typedef struct {
+typedef struct
+{
   struct netconn* conn; // the connection
   char* url;            // the associated url,  null terminated
   char* protocol;		// the associated protocol, null terminated

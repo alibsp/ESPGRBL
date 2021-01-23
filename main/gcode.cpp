@@ -69,9 +69,7 @@ void gc_sync_position()
 // characters have been removed. In this function, all units and positions are converted and
 // exported to grbl's internal functions in terms of (mm, mm/min) and absolute machine
 // coordinates, respectively.
-uint8_t 
-
-gc_execute_line(char *line)
+uint8_t gc_execute_line(char *line)
 {
 	printf("in Gcode line  = %s\n",line);
 	/* -------------------------------------------------------------------------------------
