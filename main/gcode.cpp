@@ -431,7 +431,8 @@ uint8_t gc_execute_line(char *line)
 				break;
 			case 'T':
 				word_bit = WORD_T;
-				if(value > MAX_TOOL_NUMBER)  {
+                if(value > MAX_TOOL_NUMBER)
+                {
 					FAIL(STATUS_GCODE_MAX_VALUE_EXCEEDED);
 				}
 				grbl_sendf("[MSG:Tool No: %d]\r\n", int_value);

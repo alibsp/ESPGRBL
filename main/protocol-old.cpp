@@ -279,12 +279,14 @@ void protocol_exec_rt_system()
 {
     uint8_t rt_exec; // Temp variable to avoid calling volatile multiple times.
     rt_exec = sys_rt_exec_alarm; // Copy volatile sys_rt_exec_alarm.
-    if (rt_exec) { // Enter only if any bit flag is true
+    if (rt_exec)
+    { // Enter only if any bit flag is true
         // System alarm. Everything has shutdown by something that has gone severely wrong. Report
         // the source of the error to the user. If critical, Grbl disables by entering an infinite
         // loop until system reset/abort.
         sys.state = STATE_ALARM; // Set system alarm state
-        switch (rt_exec) {
+        switch (rt_exec)
+        {
             case 1: grbl_send("message: EXEC_ALARM_HARD_LIMIT"); break;
             case 2: grbl_send("message: EXEC_ALARM_SOFT_LIMIT"); break;
             case 3: grbl_send("message: EXEC_ALARM_ABORT_CYCLE"); break;
@@ -312,7 +314,8 @@ void protocol_exec_rt_system()
     }
 
     rt_exec = sys_rt_exec_state; // Copy volatile sys_rt_exec_state.
-    if (rt_exec) {
+    if (rt_exec)
+    {
 
         // Execute system abort.
         if (rt_exec & EXEC_RESET) {
@@ -334,12 +337,18 @@ void protocol_exec_rt_system()
             if (!(sys.state & (STATE_ALARM | STATE_CHECK_MODE))) {
 
                 // If in CYCLE or JOG states, immediately initiate a motion HOLD.
-                if (sys.state & (STATE_CYCLE | STATE_JOG)) {
-                    if (!(sys.suspend & (SUSPEND_MOTION_CANCEL | SUSPEND_JOG_CANCEL))) { // Block, if already holding.
+                if (sys.state & (STATE_CYCLE | STATE_JOG))
+                {
+                    if (!(sys.suspend & (SUSPEND_MOTION_CANCEL | SUSPEND_JOG_CANCEL)))
+                    { // Block, if already holding.
                         st_update_plan_block_parameters(); // Notify stepper module to recompute for hold deceleration.
                         sys.step_control = STEP_CONTROL_EXECUTE_HOLD; // Initiate suspend state with active flag.
-                        if (sys.state == STATE_JOG) { // Jog cancelled upon any hold event, except for sleeping.
-                            if (!(rt_exec & EXEC_SLEEP)) { sys.suspend |= SUSPEND_JOG_CANCEL; }
+                        if (sys.state == STATE_JOG)
+                        { // Jog cancelled upon any hold event, except for sleeping.
+                            if (!(rt_exec & EXEC_SLEEP))
+                            {
+                                sys.suspend |= SUSPEND_JOG_CANCEL;
+                            }
                         }
                     }
                 }
@@ -478,7 +487,8 @@ void protocol_exec_rt_system()
 
     // Execute overrides.
     rt_exec = sys_rt_exec_motion_override; // Copy volatile sys_rt_exec_motion_override
-    if (rt_exec) {
+    if (rt_exec)
+    {
         system_clear_exec_motion_overrides(); // Clear all motion override flags.
 
         uint8_t new_f_override =  sys.f_override;
@@ -505,7 +515,8 @@ void protocol_exec_rt_system()
     }
 
     rt_exec = sys_rt_exec_accessory_override;
-    if (rt_exec) {
+    if (rt_exec)
+    {
         system_clear_exec_accessory_overrides(); // Clear all accessory override flags.
 
         // NOTE: Unlike motion overrides, spindle overrides do not require a planner reinitialization.

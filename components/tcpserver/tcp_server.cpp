@@ -10,9 +10,14 @@
 #include "tcp_server.h"
 static const char *TAG = "TCPServer";
 
+
+bool tcpClientConnected;
+int listen_sock;
+int currentClient;
+struct sockaddr_in destAddr;
+
 void tcp_server_task(void *pvParameters)
 {
-
     char rx_buffer[128];
     char addr_str[128];
     int addr_family;
@@ -73,15 +78,16 @@ void tcp_server_task(void *pvParameters)
                 ESP_LOGE(TAG, "Unable to accept connection: errno %d", errno);
                 break;
             }
-            ESP_LOGI(TAG, "Socket accepted");
             tcpClientConnected = true;
+            ESP_LOGI(TAG, "Socket accepted");
+            printf("TCP currentClient:%d, tcpClientConnected:%d\n", currentClient, tcpClientConnected);
             while (1)
             {
                 int len = recv(currentClient, rx_buffer, sizeof(rx_buffer) - 1, 0);
                 // Error occurred during receiving
                 if (len < 0)
                 {
-                    ESP_LOGE(TAG, "Recv failed: errno %d", errno);
+                    ESP_LOGE(TAG, "Received failed: errno: %d", errno);
                     break;
                 }
                 // Connection closed
@@ -103,19 +109,16 @@ void tcp_server_task(void *pvParameters)
                     }
 
                     rx_buffer[len] = 0; // Null-terminate whatever we received and treat like a string
-                    ESP_LOGI(TAG, "Received %d bytes from %s:", len, addr_str);
-                    ESP_LOGI(TAG, "%s", rx_buffer);
-
+                    ESP_LOGI(TAG, "Received %d bytes from %s:%s", len, addr_str, rx_buffer);
                     if(len)
                     {
-                        //   printf("main.cpp websocket_callback msg = %s\n",msg[i]);
+                        //printf("main.cpp websocket_callback msg = %s\n",msg[i]);
                         if( xQueueSendToBack( websocket_queue, rx_buffer, ( TickType_t ) 500 ) != pdPASS )
                             printf("Failed to post the message on websocket Queue after 50 ticks\n");
                     }
 
                 }
             }
-
             if (currentClient != -1)
             {
                 ESP_LOGE(TAG, "Shutting down socket and restarting...");

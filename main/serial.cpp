@@ -144,8 +144,6 @@ void serialCheckTask(void *pvParameters)
                 {
                     printf("Failed to post the message on gcode Queue after 50 ticks\n");
                 }
-
-
         }
         vTaskDelay(1 / portTICK_RATE_MS);  // Yield to other tasks
     }

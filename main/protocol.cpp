@@ -32,6 +32,7 @@
 #include "main.h"
 #include "nuts_bolts.h"
 #include "wstring.h"
+#include "tcp_server.h"
 // Define line flags. Includes comment type tracking and line overflow detection.
 #define LINE_FLAG_OVERFLOW bit(0)
 #define LINE_FLAG_COMMENT_PARENTHESES bit(1)
@@ -40,6 +41,9 @@
 extern QueueHandle_t websocket_queue;
 extern QueueHandle_t gcode_queue;
 static void protocol_exec_rt_suspend();
+
+extern int currentClient;
+extern bool tcpClientConnected;
 
 uint8_t line_flags = 0;
 /*
@@ -118,7 +122,6 @@ typedef struct QueueDefinition
 
 void protocol_process_gcode(void *pvParameters)
 {
-
     printf("protocol running on core = %d\n", xPortGetCoreID());
     char message[LINE_BUFFER_SIZE];
     int last_numberOfSpacesInGcodeQueue =0;
@@ -127,23 +130,26 @@ void protocol_process_gcode(void *pvParameters)
         //printf("%s\n",line);
         // Process one line of incoming serial data, as the data becomes available. Performs an
         // initial filtering by removing spaces and comments and capitalizing all letters.
-        message[0] = '\0';
+        message[0] = 0;
         //printf("protocol_process_gcode1 default %s %d\n", message, strlen(message));//, (char*)gcode_queue->pcTail);
-        xQueueReceive (gcode_queue, message, 0);
+        xQueueReceive (gcode_queue, message, portMAX_DELAY);
         int numberOfSpacesInGcodeQueue = uxQueueSpacesAvailable(gcode_queue);
         //if(numberOfSpacesInGcodeQueue > 18)
         //printf("number of spaces in gcode_queue = %d\n",numberOfSpacesInGcodeQueue);
-        if(last_numberOfSpacesInGcodeQueue!=numberOfSpacesInGcodeQueue)
-            printf("protocol_process_gcode gcode_queue len:%d, numberOfSpacesInGcodeQueue:%d\n", ((xQUEUE*)gcode_queue)->uxMessagesWaiting, numberOfSpacesInGcodeQueue);
+        //if(last_numberOfSpacesInGcodeQueue!=numberOfSpacesInGcodeQueue)
+        printf("protocol_process_gcode gcode_queue len:%d, numberOfSpacesInGcodeQueue:%d\n", ((xQUEUE*)gcode_queue)->uxMessagesWaiting, numberOfSpacesInGcodeQueue);
+        //printf("process_gcode currentClient:%d, tcpClientConnected:%d \n", currentClient, tcpClientConnected);
         last_numberOfSpacesInGcodeQueue = numberOfSpacesInGcodeQueue;
         //printf("serialCheckTask default %s %d %s %s\n", message, strlen(message), gcode_queue->pcHead, gcode_queue->pcTail);
         //printf("protocol_process_gcode2 default %s %d\n", message, strlen(message));
+        vTaskDelay(100);
         if(strlen(message) == 0)
         {
+            //vTaskDelay(10);
             protocol_execute_realtime();
             if (sys.abort)
             {
-                printf("sys abort\n");
+                printf("sys abort in no message\n");
                 break;
                 //return;
             } // Fail to calling function upon system abort
@@ -151,15 +157,15 @@ void protocol_process_gcode(void *pvParameters)
             protocol_execute_realtime();
             continue;
         }
-        printf("message len = %x\n",strlen(message));
+        printf("message len = %x:%s\n",strlen(message), message);
         check_gcode(message);
         protocol_execute_realtime(); // Runtime command check point.
         //aldaghi code
         grbl_send(message);
         if (sys.abort)
         {
-            printf("sys abort\n");
-            break;
+            printf("sys abort in has message\n");
+            //break;
             //return;
         } // Bail to calling function upon system abort
 
@@ -333,7 +339,10 @@ void protocol_auto_cycle_start()
 void protocol_execute_realtime()
 {
     protocol_exec_rt_system();
-    if (sys.suspend) { protocol_exec_rt_suspend(); }
+    if (sys.suspend)
+    {
+        protocol_exec_rt_suspend();
+    }
 }
 
 
@@ -381,12 +390,13 @@ void protocol_exec_rt_system()
     }
 
     rt_exec = sys_rt_exec_state; // Copy volatile sys_rt_exec_state.
+    //printf("rt_exec:%d\n", rt_exec);
     if (rt_exec)
     {
-
         // Execute system abort.
         if (rt_exec & EXEC_RESET)
         {
+            //printf("rt_exec:%d sys.abort = true\n", rt_exec);
             sys.abort = true;  // Only place this is set true.
             return; // Nothing else to do but exit.
         }

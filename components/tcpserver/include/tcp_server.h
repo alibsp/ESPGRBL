@@ -1,14 +1,12 @@
-
-
 #ifndef TCPSERVER_H
 #define TCPSERVER_H
 
 
-#ifdef __cplusplus
+/*#ifdef __cplusplus
 extern "C"
 {
 #endif
-
+*/
 
 #include <string.h>
 #include <sys/param.h>
@@ -26,18 +24,16 @@ extern "C"
 #include <lwip/netdb.h>
 #define PORT 1000
 
-static bool tcpClientConnected;
 extern QueueHandle_t websocket_queue;
-static int listen_sock;
-static int currentClient;
-static struct sockaddr_in destAddr;
+
 
 void tcp_server_task(void *pvParameters);
 int  tcpServerSendTextClient(char* msg, uint64_t len);
 
 
-#ifdef __cplusplus
+/*#ifdef __cplusplus
 }
 #endif
+*/
 
 #endif // ifndef TCPSERVER_H

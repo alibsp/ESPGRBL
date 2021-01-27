@@ -57,7 +57,7 @@
 #include "notifications_service.h"
 #define DEFAULTBUFFERSIZE 64
 extern bool websocketConnected;
-
+extern bool tcpClientConnected;
 void * websocket;
 bool webattached = false;
 // this is a generic send function that everything should use, so interfaces could be added (Bluetooth, etc)
@@ -193,7 +193,7 @@ void report_status_message(uint8_t status_code,char * line)
     switch(status_code)
     {
         case STATUS_OK: // STATUS_OK
-            printf("ok sent with this command =, %s\n",line);
+            printf("ok sent with this command = %s\n",line);
             grbl_send("ok\r\n");
             break;
         default:

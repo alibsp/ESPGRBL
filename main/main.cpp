@@ -97,6 +97,7 @@ char dest[20];
 #define WIFI_FAIL_BIT      BIT1
 QueueHandle_t websocket_queue;
 QueueHandle_t gcode_queue;
+
 int32_t lValueToSend;
 // Declare system global variable structure
 system_t sys; 
