@@ -155,12 +155,18 @@ uint32_t spindle_compute_pwm_value(float rpm)
 
 void spindle_set_state(uint8_t state, float rpm)
 {
-    //printf("spindle set state RPM = %f\n", rpm);
-    if (sys.abort) { return; } // Block during abort.
-    if (state == SPINDLE_DISABLE) { // Halt or set spindle direction and rpm.
+    printf("spindle set state RPM = %0.6f sys.abort:%d\n", rpm, sys.abort);
+    if (sys.abort)
+    {
+        //aldaghi
+        //return;
+    } // Block during abort.
+    if (state == SPINDLE_DISABLE)
+    { // Halt or set spindle direction and rpm.
         sys.spindle_speed = 0.0;
         spindle_stop();
-    } else {
+    } else
+    {
 
         // TODO ESP32 Enable and direction control
 #ifdef SPINDLE_DIR_PIN
@@ -180,7 +186,11 @@ void spindle_set_state(uint8_t state, float rpm)
 
 void spindle_sync(uint8_t state, float rpm)
 {
-    if (sys.state == STATE_CHECK_MODE) { return; }
+    printf("spindle_sync state:%d RPM:%0.6f\n", state, rpm);
+    if (sys.state == STATE_CHECK_MODE)
+    {
+        return;
+    }
     protocol_buffer_synchronize(); // Empty planner buffer to ensure spindle is set when programmed.
     spindle_set_state(state,rpm);
 }
